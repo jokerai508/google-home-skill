@@ -40,14 +40,25 @@ python scripts/fulfillment.py
 #   GOOGLE_CLIENT_ID
 #   GOOGLE_CLIENT_SECRET
 #   JWT_SECRET
+#   HUE_BRIDGE=192.168.0.15
+#   HUE_USERNAME=<from bridge registration>
 ```
 
-## Step 4: Expose Public URL
+## Step 4: Hue Bridge Username
+The fulfillment server needs a Hue API username to control lights.
+1. Press the **link button** on your Hue bridge
+2. Run: `python -c "import requests; print(requests.post('http://<bridge-ip>/api', json={'devicetype':'hermes#jokerai'}, timeout=5).text)"`
+3. Copy the `username` value from the response
+4. Set it as `HUE_USERNAME` in your deployment environment
+
+If using the bundled `devices.py`, your Hue devices are already pre-registered.
+
+## Step 5: Expose Public URL
 - Use ngrok for testing: `ngrok http 8080`
 - Or deploy to Cloud Run / Render / Railway
 - Update Actions console with the public URL
 
-## Step 5: Link in Google Home App
+## Step 6: Link in Google Home App
 1. Open Google Home app
 2. Add device → Works with Google
 3. Find your action name

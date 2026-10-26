@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import json
+import requests
 from typing import Any, Dict
 
 from flask import Flask, request, jsonify
@@ -11,6 +12,8 @@ from flask import Flask, request, jsonify
 from auth import verify_token
 from devices import get_device, list_devices
 
+HUE_BRIDGE = os.getenv("HUE_BRIDGE", "192.168.0.15")
+HUE_USERNAME = os.getenv("HUE_USERNAME", "")
 app = Flask(__name__)
 
 
@@ -20,6 +23,33 @@ def ok(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def err(code: str, msg: str) -> Dict[str, Any]:
     return {"requestId": request.headers.get("X-Request-Id", ""), "errorCode": code, "errorMessage": msg}
+
+
+def hue_set_light(light_id: str, on: bool = None, brightness: int = None, xy: list = None):
+    if not HUE_USERNAME:
+        return False, "HUE_USERNAME not configured"
+    url = f"http://{HUE_BRIDGE}/api/{HUE_USERNAME}/lights/{light_id}/state"
+    body = {}
+    if on is not None:
+        body["on"] = on
+    if brightness is not None:
+        body["bri"] = max(1, min(254, int(brightness * 254 / 100)))
+    if xy:
+        body["xy"] = xy
+    try:
+        r = requests.put(url, json=body, timeout=3)
+        data = r.json()
+        if isinstance(data, list) and data and "success" in data[0]:
+            return True, data[0]["success"]
+        return False, str(data)
+    except Exception as e:
+        return False, str(e)
+
+
+def xy_from_spectrum_rgb(spectrum_rgb: int):
+    # Placeholder: spectrumRgb is deprecated in modern Google Smart Home.
+    # For now we keep current color unchanged unless caller sends xy explicitly.
+    return None
 
 
 @app.route("/fulfillment", methods=["POST"])
@@ -54,7 +84,8 @@ def fulfillment():
         result = {}
         for device_id in devices:
             d = get_device(device_id)
-            result[device_id] = {"online": True, "status": "SUCCESS", "states": d.state if d else {"on": False}}
+            states = dict(d.state) if d else {"on": False}
+            result[device_id] = {"online": True, "status": "SUCCESS", "states": states}
         return jsonify(ok({"devices": result}))
 
     if intent == "action.devices.EXECUTE":
@@ -67,19 +98,46 @@ def fulfillment():
                 if not dev:
                     results.append({"ids": [device_id], "status": "ERROR", "errorCode": "deviceNotFound"})
                     continue
+
+                on = None
+                brightness = None
+                xy = None
                 for exec_cmd in cmd.get("execution", []):
                     command = exec_cmd.get("command")
                     params = exec_cmd.get("params", {})
                     if command == "action.devices.commands.OnOff":
-                        dev.state["on"] = params.get("on", dev.state["on"])
+                        on = params.get("on", dev.state.get("on", False))
                     elif command == "action.devices.commands.BrightnessAbsolute":
-                        dev.state["brightness"] = params.get("brightness", dev.state.get("brightness"))
+                        brightness = params.get("brightness", dev.state.get("brightness"))
                     elif command == "action.devices.commands.ColorAbsolute":
                         color = params.get("color", {})
-                        if "rgb" in color:
-                            dev.state["color"] = {"rgb": color["rgb"]}
-                    print(f"[exec] {device_id} {command} {params}")
-                results.append({"ids": [device_id], "status": "SUCCESS", "states": dev.state})
+                        if "spectrumRgb" in color:
+                            dev.state["color"] = {"spectrumRgb": color["spectrumRgb"]}
+                        if "xy" in color:
+                            xy = color["xy"]
+
+                ok_hue = True
+                hue_msg = ""
+                if device_id == "hue-all-lights":
+                    all_ids = [
+                        x.id for x in list_devices()
+                        if x.id != "hue-all-lights" and x.type == "action.devices.types.LIGHT"
+                    ]
+                    for lid in all_ids:
+                        ok2, msg2 = hue_set_light(lid, on=on, brightness=brightness, xy=xy)
+                        ok_hue = ok_hue and ok2
+                        hue_msg += f"{lid}:{msg2};"
+                else:
+                    ok_hue, hue_msg = hue_set_light(device_id, on=on, brightness=brightness, xy=xy)
+
+                if on is not None:
+                    dev.state["on"] = on
+                if brightness is not None:
+                    dev.state["brightness"] = brightness
+
+                status = "SUCCESS" if ok_hue else "ERROR"
+                print(f"[exec] {device_id} on={on} bri={brightness} xy={xy} -> {status} {hue_msg}")
+                results.append({"ids": [device_id], "status": status, "states": dev.state})
         return jsonify(ok({"commands": results}))
 
     return jsonify(err("invalid_intent", f"Unsupported intent: {intent}")), 400

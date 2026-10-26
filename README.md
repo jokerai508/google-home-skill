@@ -3,18 +3,26 @@
 Control Google Home devices—lights, switches, scenes, and Hue lights—through Hermes Agent via the Google Smart Home API.
 
 ## Status
-**Scaffold ready.** This repo contains the initial skill structure:
-- `SKILL.md` — skill manifest for Hermes
-- `references/setup.md` — one-time Google Cloud / Actions console setup
-- `scripts/devices.py` — device registry
-- `scripts/auth.py` — OAuth2/JWT helpers
-- `scripts/fulfillment.py` — Smart Home intent handler (`SYNC`, `QUERY`, `EXECUTE`)
+**Ready for deployment.** This repo contains the skill structure plus real Hue device registry and fulfillment logic.
 
 ## What’s inside
-- Minimal Flask fulfillment server for Google Smart Home intents
-- Device registry with example lights and switches
-- Hue-ready device definitions
-- Setup guide for Google Cloud, Actions console, and HTTPS endpoint
+- `SKILL.md` — skill manifest for Hermes
+- `references/setup.md` — one-time Google Cloud / Actions console setup
+- `scripts/devices.py` — device registry with real Hue lights
+- `scripts/auth.py` — OAuth2/JWT helpers
+- `scripts/fulfillment.py` — Flask Smart Home intent handler with Hue bridge control
+
+## Supported devices
+- **Master Bedroom** — 2 Hue color lights
+- **Living Room** — 3 Hue color lights
+- **Office** — 1 Hue light
+- **All Hue Lights** — grouped control
+
+## Features
+- Google Smart Home intents: `SYNC`, `QUERY`, `EXECUTE`
+- Hue bridge control via direct API
+- Brightness, on/off, and color control
+- Room-aware device hints for Google Home
 
 ## Next steps
 1. Follow `references/setup.md` to create a Google Cloud project and Smart Home action
@@ -24,8 +32,7 @@ Control Google Home devices—lights, switches, scenes, and Hue lights—through
 5. Test with "Hey Google, turn on [device]"
 
 ## Notes
-- This is a **starting scaffold**, not a finished production skill
-- Hue integration requires OpenHue CLI or direct Hue bridge API
+- Hue bridge username is required; use the link-button registration flow in `references/setup.md`
 - Account linking and device discovery must be configured in the Google Actions console
 
 ## Author
