@@ -12,6 +12,7 @@
 3. Enable the **Smart Home API** in the API Library
 4. Go to **APIs & Services → Credentials**
 5. Create **OAuth 2.0 Client ID** (type: Web application)
+   - Name: `jokerai508-home-fulfillment`
    - Add your fulfillment URL to authorized origins
    - Save the Client ID and Client Secret
 
@@ -42,6 +43,12 @@ python scripts/fulfillment.py
 #   JWT_SECRET
 #   HUE_BRIDGE=192.168.0.15
 #   HUE_USERNAME=<from bridge registration>
+```
+
+### Testing without OAuth
+If you don't have Client ID/Secret yet, set `BYPASS_AUTH=true` to skip token validation:
+```bash
+BYPASS_AUTH=true python scripts/fulfillment.py
 ```
 
 ## Step 4: Hue Bridge Username
