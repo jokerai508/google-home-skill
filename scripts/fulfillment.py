@@ -14,6 +14,14 @@ from devices import get_device, list_devices
 
 HUE_BRIDGE = os.getenv("HUE_BRIDGE", "192.168.0.15")
 HUE_USERNAME = os.getenv("HUE_USERNAME", "")
+HUE_V1_MAP = {
+    "1d2be6d4-cfa3-4bad-ae34-7b9fefb261c2": "5",
+    "e183b237-6801-473f-95bd-954b45e0906f": "6",
+    "a5bc5274-92c8-45cb-96c9-2cb05308d7c7": "4",
+    "fba5f3ea-343c-466b-ac85-93638bdc67f9": "7",
+    "4443dc09-4130-4d49-a95f-8404a4b11a18": "8",
+    "3f940eee-fd06-46b2-8c0b-0634284a26e9": "9",
+}
 app = Flask(__name__)
 
 
@@ -28,7 +36,8 @@ def err(code: str, msg: str) -> Dict[str, Any]:
 def hue_set_light(light_id: str, on: bool = None, brightness: int = None, xy: list = None):
     if not HUE_USERNAME:
         return False, "HUE_USERNAME not configured"
-    url = f"http://{HUE_BRIDGE}/api/{HUE_USERNAME}/lights/{light_id}/state"
+    v1_id = HUE_V1_MAP.get(light_id, light_id)
+    url = f"http://{HUE_BRIDGE}/api/{HUE_USERNAME}/lights/{v1_id}/state"
     body = {}
     if on is not None:
         body["on"] = on
